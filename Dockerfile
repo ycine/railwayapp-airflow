@@ -14,6 +14,8 @@ RUN pip install --no-cache-dir \
       --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-${AIRFLOW_VERSION}/constraints-${PYTHON_VERSION}.txt" \
       -r /requirements.txt
 
+
+COPY dags /opt/airflow/dags
 COPY --chmod=0755 docker-entrypoint.sh /opt/airflow/railway-entrypoint.sh
 
 ENTRYPOINT ["/opt/airflow/railway-entrypoint.sh"]
