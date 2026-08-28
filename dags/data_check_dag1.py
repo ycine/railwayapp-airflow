@@ -10,12 +10,11 @@ def check():
 with DAG(
     dag_id="data_quality_check",
     start_date=datetime(2024, 1, 1),
-    schedule_interval="@once",
+    schedule="@once",   # ⭐ Airflow 3.x używa tylko `schedule`
     catchup=False,
 ) as dag:
 
     check_task = PythonOperator(
         task_id="check",
         python_callable=check,
-        dag=dag,
     )
