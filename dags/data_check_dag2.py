@@ -54,33 +54,32 @@ def fetch_measurements_summary(**context) -> int:
     return count
 
 
-def check_recent_readings_per_installation(**context) -> None:
-    """
-    Sprawdza dla każdej instalacji, czy w ostatnich N dniach w ogóle
-    coś przyszło (a nie tylko jedna, zahardkodowana instalacja).
-    """
+def check_recent_readings_per_installation(**context):
     hook = PostgresHook(postgres_conn_id=CONN_ID)
-    installation_ids = _get_active_installation_ids(hook)
 
-    missing_data = []
-    for installation_id in installation_ids:
-        row = hook.get_first(
-            """
-            SELECT COUNT(*)
-            FROM measurements
-            WHERE installation_id = %(installation_id)s
-              AND timestamp >= NOW() - INTERVAL '12 days';
-            """,
-            parameters={"installation_id": installation_id},
+    # instalacje z danymi w ostatnich 12 dni
+    rows = hook.get_records("""
+        SELECT installation_id, COUNT(*) AS recent_count
+        FROM measurements
+        WHERE timestamp >= NOW() - INTERVAL '12 days'
+        GROUP BY installation_id;
+    """)
+
+    active = {r[0] for r in rows}
+
+    # wszystkie instalacje w measurements
+    all_ids = set(_get_active_installation_ids(hook))
+
+    # instalacje bez danych
+    missing = sorted(all_ids - active)
+
+    if missing:
+        raise ValueError(
+            f"Brak odczytów w ostatnich 12 dniach dla instalacji: {missing}"
         )
-        if row[0] == 0:
-            missing_data.append(installation_id)
 
-    if missing_data:
-        f"Brak jakichkolwiek odczytów w ostatnich 12 dniach dla instalacji: "
-        f"{missing_data}"
-        
-    log.info("Wszystkie instalacje (%d) mają odczyty w ostatnich 12 dniach.", len(installation_ids))
+    log.info("Wszystkie instalacje (%d) mają odczyty w ostatnich 12 dniach.", len(all_ids))
+
 
 
 def check_gaps_in_readings(**context) -> None:
@@ -126,27 +125,41 @@ def check_gaps_in_readings(**context) -> None:
     log.info("Brak luk w danych w ostatnich %s.", LOOKBACK_WINDOW)
 
 
-def _on_failure_alert(context) -> None:
-    """
-    Miejsce na integrację z alertingiem (Slack/e-mail/PagerDuty).
-    Na razie tylko log — podmień na realne wywołanie webhooka.
-    """
-    task_instance = context["task_instance"]
-    exception = context.get("exception")
-    log.error(
-        "Task %s w DAG-u %s zawiódł: %s",
-        task_instance.task_id,
-        task_instance.dag_id,
-        exception,
+
+def installation_ranking() -> None:
+
+    hook = PostgresHook(postgres_conn_id=CONN_ID)
+    rows = hook.get_records(
+        f"""
+        SELECT
+            installation_id,
+            total_energy_kwh,
+            RANK() OVER (ORDER BY total_energy_kwh DESC) AS rank
+        FROM (
+            SELECT
+                installation_id,
+                SUM(power * 0.25) AS total_energy_kwh
+            FROM measurements
+            WHERE timestamp >= '2026-03-01' AND timestamp < '2026-04-01'
+            GROUP BY installation_id
+        ) sub
+        ORDER BY rank
+        LIMIT 10;
+        """
     )
-    # np.: send_slack_notification(channel="#data-alerts", message=...)
+
+    if rows:
+        f"Oto 10 instalacji z najwieksza produkcja: {rows}"
+        
+
+    
 
 
 default_args = {
-    "owner": "data-engineering",
+    "owner": "marcin-engineering",
     "retries": 2,
     "retry_delay": timedelta(minutes=5),
-    "on_failure_callback": _on_failure_alert,
+   
 }
 
 with DAG(
@@ -154,7 +167,7 @@ with DAG(
     description="Wykrywanie braków i luk w danych z measurements",
     default_args=default_args,
     start_date=datetime(2026, 4, 1),
-    schedule="0 * * * *",   # co godzinę — dopasuj do rzeczywistej częstotliwości danych
+    schedule="0 * * * *",   # co godzinę 
     catchup=False,
     max_active_runs=1,
     tags=["data-quality", "measurements"],
@@ -179,7 +192,12 @@ with DAG(
         task_id="check_gaps_in_readings",
         python_callable=check_gaps_in_readings,
     )
+    
+    ranking = PythonOperator(
+        task_id="installation_ranking",
+        python_callable=installation_ranking,
+        )
 
     # równolegle — awaria jednego nie blokuje pozostałych.
-    check_connectivity_task >> [fetch_summary_task]
+    check_connectivity_task >> [fetch_summary_task >> check_gaps_task >> check_recent_readings_per_installation >> ranking]
         
