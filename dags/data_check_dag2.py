@@ -149,7 +149,7 @@ def installation_ranking() -> None:
     )
 
     if rows:
-        f"Oto 10 instalacji z najwieksza produkcja: {rows}"
+        log.info(f"Oto 10 instalacji z najwieksza produkcja: {rows}")
         
 
     
