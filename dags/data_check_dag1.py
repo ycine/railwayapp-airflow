@@ -26,11 +26,11 @@ def get_days_from_now():
         print(row)
     return rows
 
+
 def get_days_without_readings():
     '''-- ## 3. Wykrywanie braków w danych (gap detection)'''
     hook = PostgresHook(postgres_conn_id="Api_hoy_db") 
-    rows = hook.get_records('''
-                                WITH ordered AS (
+    rows = hook.get_records('''WITH ordered AS (
                                 SELECT
                                     installation_id,
                                     timestamp,
@@ -38,7 +38,7 @@ def get_days_without_readings():
                                         PARTITION BY installation_id ORDER BY timestamp
                                     ) AS prev_timestamp
                                 FROM measurements
-                                WHERE timestamp >= NOW() - INTERVAL '17 days''')
+                                WHERE timestamp >= NOW() - INTERVAL '17 days';''')
     for row in rows:
         print(row)
     return rows
