@@ -199,5 +199,5 @@ with DAG(
         )
 
     # równolegle — awaria jednego nie blokuje pozostałych.
-    check_connectivity_task >> [fetch_summary_task >> check_gaps_task >> check_recent_readings_per_installation >> ranking]
+    check_connectivity_task >> [fetch_summary_task >> check_gaps_task >> check_recent_task >> ranking]
         
