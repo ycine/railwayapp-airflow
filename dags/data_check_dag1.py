@@ -20,7 +20,7 @@ def get_days_from_now():
                             FROM measurements
                             WHERE installation_id = 6402
                             AND timestamp >= NOW() - INTERVAL '12 day'
-                            ORDER BY timestamp;'''')
+                            ORDER BY timestamp;''')
     for row in rows:
         print(row)
     return rows
@@ -49,3 +49,4 @@ with DAG(
     )
 
     check_task >> fetch_task >> get_days
+        
