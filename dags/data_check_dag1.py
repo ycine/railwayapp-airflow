@@ -14,9 +14,10 @@ def fetch_measurements():
         print(row)
     return rows
 
+
 def get_days_from_now():
     hook = PostgresHook(postgres_conn_id="Api_hoy_db") 
-    rows = hook.get_records(''''SELECT installation_id, timestamp, power
+    rows = hook.get_records('''SELECT installation_id, timestamp, power
                             FROM measurements
                             WHERE installation_id = 6402
                             AND timestamp >= NOW() - INTERVAL '12 day'
