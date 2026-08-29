@@ -5,15 +5,26 @@ from datetime import datetime
 
 def check():
     print("Running data quality check+++====+++++")
-    # tutaj wstaw właściwą logikę sprawdzania danych
-    # np. zapytanie do bazy, walidacja liczby wierszy, itp.
+    
 
 def fetch_measurements():
-    hook = PostgresHook(postgres_conn_id="Api_hoy_db")  # podmień na swój connection_id z Airflow
+    hook = PostgresHook(postgres_conn_id="Api_hoy_db") 
     rows = hook.get_records("SELECT * FROM measurements LIMIT 5;")
     for row in rows:
         print(row)
     return rows
+
+def get_days_from_now():
+    hook = PostgresHook(postgres_conn_id="Api_hoy_db") 
+    rows = hook.get_records("SELECT installation_id, timestamp, power
+                            FROM measurements
+                            WHERE installation_id = 6402
+                            AND timestamp >= NOW() - INTERVAL '12 day'
+                            ORDER BY timestamp;")
+    for row in rows:
+        print(row)
+    return rows
+
 
 with DAG(
     dag_id="data_quality_check",
@@ -29,6 +40,11 @@ with DAG(
     fetch_task = PythonOperator(
         task_id="fetch_measurements",
         python_callable=fetch_measurements,
+    )
+
+    fetch_task = PythonOperator(
+        task_id="get_days_from_now",
+        python_callable=get_days_from_now,
     )
 
     check_task >> fetch_task
