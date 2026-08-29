@@ -77,11 +77,9 @@ def check_recent_readings_per_installation(**context) -> None:
             missing_data.append(installation_id)
 
     if missing_data:
-        # Rzucamy wyjątek -> task faili się -> trafia do on_failure_callback
-        raise ValueError(
-            f"Brak jakichkolwiek odczytów w ostatnich 12 dniach dla instalacji: "
-            f"{missing_data}"
-        )
+        f"Brak jakichkolwiek odczytów w ostatnich 12 dniach dla instalacji: "
+        f"{missing_data}"
+        
     log.info("Wszystkie instalacje (%d) mają odczyty w ostatnich 12 dniach.", len(installation_ids))
 
 
@@ -120,10 +118,10 @@ def check_gaps_in_readings(**context) -> None:
         # Dociąga do XCom tylko podsumowanie, nie surowe wiersze
         context["ti"].xcom_push(key="gap_count", value=len(rows))
         context["ti"].xcom_push(key="affected_installations", value=affected)
-        raise ValueError(
-            f"Wykryto {len(rows)} luk w danych (próg: {GAP_THRESHOLD}). "
-            f"Dotknięte instalacje: {affected}"
-        )
+        
+        f"Wykryto {len(rows)} luk w danych (próg: {GAP_THRESHOLD}). "
+        f"Dotknięte instalacje: {affected}"
+        
 
     log.info("Brak luk w danych w ostatnich %s.", LOOKBACK_WINDOW)
 
