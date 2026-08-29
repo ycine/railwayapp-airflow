@@ -16,11 +16,11 @@ def fetch_measurements():
 
 def get_days_from_now():
     hook = PostgresHook(postgres_conn_id="Api_hoy_db") 
-    rows = hook.get_records("SELECT installation_id, timestamp, power
+    rows = hook.get_records(''''SELECT installation_id, timestamp, power
                             FROM measurements
                             WHERE installation_id = 6402
                             AND timestamp >= NOW() - INTERVAL '12 day'
-                            ORDER BY timestamp;")
+                            ORDER BY timestamp;'''')
     for row in rows:
         print(row)
     return rows
@@ -28,10 +28,11 @@ def get_days_from_now():
 
 with DAG(
     dag_id="data_quality_check",
-    start_date=datetime(2024, 1, 1),
+    start_date=datetime(2026, 4, 1),
     schedule="@once",
     catchup=False,
 ) as dag:
+    
     check_task = PythonOperator(
         task_id="check",
         python_callable=check,
@@ -42,9 +43,9 @@ with DAG(
         python_callable=fetch_measurements,
     )
 
-    fetch_task = PythonOperator(
+    get_days = PythonOperator(
         task_id="get_days_from_now",
         python_callable=get_days_from_now,
     )
 
-    check_task >> fetch_task
+    check_task >> fetch_task >> get_days
