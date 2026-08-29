@@ -152,7 +152,7 @@ default_args = {
 }
 
 with DAG(
-    dag_id="data_quality_check",
+    dag_id="data_quality_check_full",
     description="Wykrywanie braków i luk w danych z measurements",
     default_args=default_args,
     start_date=datetime(2026, 4, 1),
