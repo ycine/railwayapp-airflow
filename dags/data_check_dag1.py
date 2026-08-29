@@ -38,7 +38,16 @@ def get_days_without_readings():
                                         PARTITION BY installation_id ORDER BY timestamp
                                     ) AS prev_timestamp
                                 FROM measurements
-                                WHERE timestamp >= NOW() - INTERVAL '17 days';''')
+                                WHERE timestamp >= NOW() - INTERVAL '17 days'
+                            )
+                            SELECT
+                                installation_id,
+                                prev_timestamp,
+                                timestamp AS next_timestamp,
+                                timestamp - prev_timestamp AS gap
+                            FROM ordered
+                            WHERE timestamp - prev_timestamp > INTERVAL '15 minutes'
+                            ORDER BY gap DESC;''')
     for row in rows:
         print(row)
     return rows
