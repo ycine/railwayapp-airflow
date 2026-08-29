@@ -26,6 +26,23 @@ def get_days_from_now():
         print(row)
     return rows
 
+def get_days_without_readings():
+    '''-- ## 3. Wykrywanie braków w danych (gap detection)'''
+    hook = PostgresHook(postgres_conn_id="Api_hoy_db") 
+    rows = hook.get_records('''
+                                WITH ordered AS (
+                                SELECT
+                                    installation_id,
+                                    timestamp,
+                                    LAG(timestamp) OVER (
+                                        PARTITION BY installation_id ORDER BY timestamp
+                                    ) AS prev_timestamp
+                                FROM measurements
+                                WHERE timestamp >= NOW() - INTERVAL '17 days''')
+    for row in rows:
+        print(row)
+    return rows
+    
 
 with DAG(
     dag_id="data_quality_check",
@@ -48,6 +65,10 @@ with DAG(
         task_id="get_days_from_now",
         python_callable=get_days_from_now,
     )
+    get_days_without = PythonOperator(
+        task_id="get_days_without_readings",
+        python_callable=get_days_without_readings,
+    )
 
-    check_task >> fetch_task >> get_days
+    check_task >> fetch_task >> get_days >> get_days_without
         
