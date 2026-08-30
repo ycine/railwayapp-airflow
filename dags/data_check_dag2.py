@@ -199,6 +199,6 @@ with DAG(
         )
 
     # kolejność liniowa
-    check_connectivity_task >> fetch_summary_task >> check_gaps_task >> check_recent_task >> ranking
+    check_connectivity_task >> fetch_summary_task >> check_gaps_task >> ranking >> check_recent_task  
 
         
