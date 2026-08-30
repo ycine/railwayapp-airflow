@@ -198,6 +198,7 @@ with DAG(
         python_callable=installation_ranking,
         )
 
-    # równolegle — awaria jednego nie blokuje pozostałych.
-    check_connectivity_task >> [fetch_summary_task >> check_gaps_task >> check_recent_task >> ranking]
+    # kolejność liniowa
+    check_connectivity_task >> fetch_summary_task >> check_gaps_task >> check_recent_task >> ranking
+
         
